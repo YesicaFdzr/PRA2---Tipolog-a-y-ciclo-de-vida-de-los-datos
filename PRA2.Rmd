@@ -1,0 +1,464 @@
+---
+title: "PRA2 - Tipología y ciclo de los datos"
+author:
+- Yésica Fernández Ramos
+- Carlos Ruiz Salvador
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Antes de empezar con la práctica, vamos a cargar los paquetes necesarios para la realización del ejercicio.
+
+```{r message=FALSE, warning=FALSE}
+# https://cran.r-project.org/web/packages/dplyr/index.html
+if (!require('dplyr')) install.packages('dplyr'); library('dplyr')
+# https://cran.r-project.org/web/packages/ggplot2/index.html
+if (!require('ggplot2')) install.packages('ggplot2'); library('ggplot2')
+```
+
+# 1. Descripción del dataset
+
+## Objetivo
+
+El objetivo de esta práctica es el tratamiento de un dataset. En este caso, vamos a trabajar con un dataset que se encuentra en Kaggle en el siguiente enlace: https://www.kaggle.com/datasets/uciml/breast-cancer-wisconsin-data 
+
+
+## Descripción
+
+El dataset contiene datos de tumores mamarios. Las características del tumor se calculan a partir de una imagen digitalizada de una masa mamaria. Las variables con las que cuenta el dataset son las siguientes:
+
+* **id:** Identificador.
+* **diagnosis:** Variable categórica que indica si el tumor es maligno (M) o benigno (B).
+* **radius_mean:** Media de las distancias desde el centro a los puntos del perímetro.
+* **texture_mean:** Desviación estandar de los valores de la escala de grises.
+* **perimeter_mean:** Tamaño medio del tumor central.
+* **area_mean:** Media del área del tumor.
+* **smoothness_mean:** Media de variación local en longitudes de radio. 
+* **compactness_mean:** Media del perímetro^2 / área - 1.0.
+* **concavity_mean:** Media de la severidad de las porciones cóncavas del contorno.
+* **concave points_mean:** Media del número de porciones cóncavas del contorno.
+* **symmetry_mean:** Media de la simetría.
+* **fractal_dimension_mean:** Media para "aproximación a la costa" - 1.
+* **radius_se:** Error estándar para la media de las distancias del centro a los puntos del perímetro.
+* **texture_se:** Error estándar para la desviación estándar de los valores de escala de grises.
+* **perimeter_se**: Error estándar para la media del perímetro.
+* **area_se**: Error estándar para la media del área.
+* **smoothness_se:** Error estándar para la variación local en longitudes de radio. 
+* **compactness_se:** Error estándar para perímetro^2 / área - 1.0.
+* **concavity_se:** Error estándar para la severidad de las porciones cóncavas del contorno.
+* **concave points_se:** Error estándar para el número de porciones cóncavas del contorno.
+* **symmetry_se:** Error estándar de la media de la simetría.
+* **fractal_dimension_se:** Error estándar para "aproximación de la línea de costa" - 1.
+* **radius_worst:** Valor medio "peor" o mayor para la media de las distancias desde el centro hasta los puntos del perímetro.
+* **texture_worst:** Valor medio "peor" o mayor para la desviación estándar de los valores de escala de grises.
+* **perimeter_worst:** Valor medio "peor" o mayor para el perímetro medio.
+* **area_worst:** Valor medio "peor" o mayor para la media del área.
+* **smoothness_worst:** Valor medio "peor" o más grande para la variación local en longitudes de radio.
+* **compactness_worst:** Valor medio "peor" o mayor para el perímetro^2/área - 1,0.
+* **concavity_worst:** Valor medio "peor" o mayor para la gravedad de las partes cóncavas del contorno.
+* **concave points_worst:** Valor medio "peor" o mayor para el número de porciones cóncavas del contorno.
+* **symmetry_worst:** Valor medio "peor" o mayor de la media de la simetría.
+* **fractal_dimension_worst:** Valor medio "peor" o mayor para "aproximación a la línea de costa" - 1.
+
+
+El cáncer de mama afecta a millones de mujeres en todo el mundo. Con este dataset se podría desarrollar un algoritmo de predicción de manera que a través de los datos de una imagen digitalizada de la masa mamaria se pueda predeccir si el tumor es benigno o maligno. Ayudaría a la diagnosis del cáncer sin pruebas demasiado invasivas.
+
+Realizamos la carga del dataset y vemos un resumen del mismo.
+
+```{r}
+cancer <- read.csv("data.csv", sep = ",", stringsAsFactors = TRUE)
+summary(cancer)
+head(cancer)
+```
+
+
+# 2. Integración y selección de datos.
+
+Para la realización del estudio se van a descartar las variables que van a utilizar todas las variables con las que cuenta el dataset. Después de realizar la limpieza y el análisis, igual se descarta alguna variable para la creación del modelo si se ve que estas no son útiles para el modelo.
+
+# 3. Limpieza de los datos
+
+## 3.1. ¿Los datos contienen ceros o elementos vacíos?
+
+En primer lugar, se va a observar si el dataset contiene NA o valores nulos. En este caso, como se puede observar en el resumen, todos las varaibles son completas, no contienen NA. Al realizar la carga de datos se ha añadido una columna "X" que contiene NA para todas las observaciones. Por lo tanto, se va a eliminar esta columna.
+
+```{r}
+cancer <- cancer[, !names(cancer) %in% c("X")]
+```
+
+## 3.2. Identifica y gestiona los valores extremos.
+
+Se procede a evaluar ahora los outliers de las variables. Para ello, se crearán gráficos de cajas y se estudiarán los valores extremos.
+
+```{r}
+par(mfrow = c(2, 5))
+g_radius_mean <- boxplot(cancer$radius_mean, main="radius_mean")
+g_texture_mean <- boxplot(cancer$texture_mean, main="texture_mean")
+g_perimeter_mean <- boxplot(cancer$perimeter_mean, main="perimeter_mean")
+g_area_mean <- boxplot(cancer$area_mean, main ="area_mean")
+g_smoothness_mean <- boxplot(cancer$smoothness_mean, main="smoothness_mean")
+g_compactness_mean <- boxplot(cancer$compactness_mean, main="compactness_mean")
+g_concavity_mean     <- boxplot(cancer$concavity_mean    , main="concavity_mean    ")
+g_concave.points_mean <- boxplot(cancer$concave.points_mean, main="concave.points_mean")
+g_symmetry_mean <- boxplot(cancer$symmetry_mean, main="symmetry_mean")
+g_fractal_dimension_mean <- boxplot(cancer$fractal_dimension_mean, main="fractal_dimension_mean")
+
+```
+
+Al observar estas 10 variables se puede ver que existen outliers para todas ellas, al rededor de 10 valores cada variable, más o menos. Como el conjunto de datos ya cuenta con pocas observaciones se van a sustituir estos valores con la media de las variables. Para ello, primero se sustituyen por NA para que estos valores no influyan a la hora del cálculo de la media.
+
+```{r}
+cancer$radius_mean <- ifelse(cancer$radius_mean %in% g_radius_mean$out,NA, cancer$radius_mean)
+cancer$texture_mean <- ifelse(cancer$texture_mean %in% g_texture_mean$out, NA, cancer$texture_mean)
+cancer$perimeter_mean <- ifelse(cancer$perimeter_mean %in% g_perimeter_mean$out, NA, cancer$perimeter_mean)
+cancer$area_mean <- ifelse(cancer$area_mean %in% g_area_mean$out, NA, cancer$area_mean)
+cancer$smoothness_mean <- ifelse(cancer$smoothness_mean %in% g_smoothness_mean$out, NA, cancer$smoothness_mean)
+cancer$compactness_mean <- ifelse(cancer$compactness_mean %in% g_compactness_mean$out, NA, cancer$compactness_mean)
+cancer$concavity_mean <- ifelse(cancer$concavity_mean %in% g_concavity_mean$out, NA, cancer$concavity_mean)
+cancer$concave.points_mean <- ifelse(cancer$concave.points_mean %in% g_concave.points_mean$out, NA, cancer$concave.points_mean)
+cancer$symmetry_mean <- ifelse(cancer$symmetry_mean %in% g_symmetry_mean$out, NA, cancer$symmetry_mean)
+cancer$fractal_dimension_mean <- ifelse(cancer$fractal_dimension_mean %in% g_fractal_dimension_mean$out, NA, cancer$fractal_dimension_mean)
+```
+
+Seguimos observando los valores extremos.
+
+```{r}
+par(mfrow = c(2, 5))
+g_radius_se <- boxplot(cancer$radius_se, main= "radius_se")
+g_texture_se <- boxplot(cancer$texture_se, main="texture_se")
+g_perimeter_se <- boxplot(cancer$perimeter_se, main="perimeter_se")
+g_area_se <- boxplot(cancer$area_se, main ="area_se")
+g_smoothness_se <- boxplot(cancer$smoothness_se, main="smoothness_se")
+g_compactness_se <- boxplot(cancer$compactness_se, main = "compactness_se")
+g_concavity_se <- boxplot(cancer$concavity_se, main = "concavity_se")
+g_concave.points_se <- boxplot(cancer$concave.points_se, main="concave.points_se")
+g_symmetry_se <- boxplot(cancer$symmetry_se, main="symmetry_se")
+g_fractal_dimension_se <- boxplot(cancer$fractal_dimension_se, main="fractal_dimension_se")
+```
+
+Para estas variables se realiza lo mismo que en el caso anterior, se sustituyen por NA para posteriormente sustituírlos por la media.
+
+```{r}
+cancer$radius_se <- ifelse(cancer$radius_se %in% g_radius_se$out, NA, cancer$radius_se)
+cancer$texture_se <- ifelse(cancer$texture_se %in% g_texture_se$out, NA, cancer$texture_se)
+cancer$perimeter_se <- ifelse(cancer$perimeter_se %in% g_perimeter_se$out, NA, cancer$perimeter_se)
+cancer$area_se <- ifelse(cancer$area_se %in% g_area_se$out, NA, cancer$area_se)
+cancer$smoothness_se <- ifelse(cancer$smoothness_se %in% g_smoothness_se$out, NA, cancer$smoothness_se)
+cancer$compactness_se <- ifelse(cancer$compactness_se %in% g_compactness_se$out, NA, cancer$compactness_se)
+cancer$concavity_se <- ifelse(cancer$concavity_se %in% g_concavity_se$out, NA, cancer$concavity_se)
+cancer$concave.points_se <- ifelse(cancer$concave.points_se %in% g_concave.points_se$out, NA, cancer$concave.points_se)
+cancer$symmetry_se <- ifelse(cancer$symmetry_se %in% g_symmetry_se$out, NA, cancer$symmetry_se)
+cancer$fractal_dimension_se <- ifelse(cancer$fractal_dimension_se %in% g_fractal_dimension_se$out, NA, cancer$fractal_dimension_se)
+```
+
+Se ven ahora los valores extremos de las últimas variables.
+
+```{r}
+par(mfrow = c(2, 5))
+g_radius_worst    <- boxplot(cancer$radius_worst, main = "radius_worst" )
+g_texture_worst <- boxplot(cancer$texture_worst, main="texture_worst")
+g_perimeter_worst <- boxplot(cancer$perimeter_worst, main="perimeter_worst")
+g_area_worst <- boxplot(cancer$area_worst, main="area_worst")
+g_smoothness_worst <- boxplot(cancer$smoothness_worst, main="smoothness_worst")
+g_compactness_worst <- boxplot(cancer$compactness_worst, main="compactness_worst")
+g_concavity_worst <- boxplot(cancer$concavity_worst, main="concavity_worst")
+g_concave.points_worst <- boxplot(cancer$concave.points_worst, main="concave.points_worst")
+g_symmetry_worst <- boxplot(cancer$symmetry_worst, main="symmetry_worst")
+g_fractal_dimension_worst <- boxplot(cancer$fractal_dimension_worst, main="fractal_dimension_worst")
+```
+
+```{r}
+cancer$radius_worst <- ifelse(cancer$radius_worst %in% g_radius_worst$out, NA, cancer$radius_worst)
+cancer$texture_worst <- ifelse(cancer$texture_worst %in% g_texture_worst$out, NA, cancer$texture_worst)
+cancer$perimeter_worst <- ifelse(cancer$perimeter_worst %in% g_perimeter_worst$out, NA, cancer$perimeter_worst)
+cancer$area_worst <- ifelse(cancer$area_worst %in% g_area_worst$out, NA, cancer$area_worst)
+cancer$smoothness_worst <- ifelse(cancer$smoothness_worst %in% g_smoothness_worst$out, NA, cancer$smoothness_worst)
+cancer$compactness_worst <- ifelse(cancer$compactness_worst %in% g_compactness_worst$out, NA, cancer$compactness_worst)
+cancer$concavity_worst <- ifelse(cancer$concavity_worst %in% g_concavity_worst$out, NA, cancer$concavity_worst)
+cancer$concave.points_worst <- ifelse(cancer$concave.points_worst %in% g_concave.points_worst$out, NA, cancer$concave.points_worst)
+cancer$symmetry_worst <- ifelse(cancer$symmetry_worst %in% g_symmetry_worst$out, NA, cancer$symmetry_worst)
+cancer$fractal_dimension_worst <- ifelse(cancer$fractal_dimension_worst %in% g_fractal_dimension_worst$out, NA, cancer$fractal_dimension_worst)
+```
+
+
+Ahora podemos sustituir los valores NA por las medias de las variables.
+
+```{r}
+cancer$radius_mean <- ifelse(is.na(cancer$radius_mean), mean(na.omit(cancer$radius_mean)), cancer$radius_mean)
+cancer$texture_mean <- ifelse(is.na(cancer$texture_mean),mean(na.omit(cancer$texture_mean)), cancer$texture_mean)
+cancer$perimeter_mean <- ifelse(is.na(cancer$perimeter_mean),mean(na.omit(cancer$perimeter_mean)), cancer$perimeter_mean)
+cancer$area_mean <- ifelse(is.na(cancer$area_mean),mean(na.omit(cancer$area_mean)), cancer$area_mean)
+cancer$smoothness_mean <- ifelse(is.na(cancer$smoothness_mean), mean(na.omit(cancer$smoothness_mean)), cancer$smoothness_mean)
+cancer$compactness_mean <- ifelse(is.na(cancer$compactness_mean), mean(na.omit(cancer$compactness_mean)), cancer$compactness_mean)
+cancer$concavity_mean <- ifelse(is.na(cancer$concavity_mean), mean(na.omit(cancer$concavity_mean)), cancer$concavity_mean)
+cancer$concave.points_mean <- ifelse(is.na(cancer$concave.points_mean),mean(na.omit(cancer$concave.points_mean)), cancer$concave.points_mean)
+cancer$symmetry_mean <- ifelse(is.na(cancer$symmetry_mean), mean(na.omit(cancer$symmetry_mean)), cancer$symmetry_mean)
+cancer$fractal_dimension_mean <- ifelse(is.na(cancer$fractal_dimension_mean),mean(na.omit(cancer$fractal_dimension_mean)), cancer$fractal_dimension_mean)
+
+cancer$radius_se <- ifelse(is.na(cancer$radius_se), mean(na.omit(cancer$radius_se)), cancer$radius_se)
+cancer$texture_se <- ifelse(is.na(cancer$texture_se), mean(na.omit(cancer$texture_se)), cancer$texture_se)
+cancer$perimeter_se <- ifelse(is.na(cancer$perimeter_se), mean(na.omit(cancer$perimeter_se)), cancer$perimeter_se)
+cancer$area_se <- ifelse(is.na(cancer$area_se), mean(na.omit(cancer$area_se)), cancer$area_se)
+cancer$smoothness_se <- ifelse(is.na(cancer$smoothness_se), mean(na.omit(cancer$smoothness_se)), cancer$smoothness_se)
+cancer$compactness_se <- ifelse(is.na(cancer$compactness_se), mean(na.omit(cancer$compactness_se)), cancer$compactness_se)
+cancer$concavity_se <- ifelse(is.na(cancer$concavity_se), mean(na.omit(cancer$concavity_se)), cancer$concavity_se)
+cancer$concave.points_se <- ifelse(is.na(cancer$concave.points_se), mean(na.omit(cancer$concave.points_se)), cancer$concave.points_se)
+cancer$symmetry_se <- ifelse(is.na(cancer$symmetry_se), mean(na.omit(cancer$symmetry_se)), cancer$symmetry_se)
+cancer$fractal_dimension_se <- ifelse(is.na(cancer$fractal_dimension_se), mean(na.omit(cancer$fractal_dimension_se)), cancer$fractal_dimension_se)
+
+cancer$radius_worst <- ifelse(is.na(cancer$radius_worst), mean(na.omit(cancer$radius_worst)), cancer$radius_worst)
+cancer$texture_worst <- ifelse(is.na(cancer$texture_worst), mean(na.omit(cancer$texture_worst)), cancer$texture_worst)
+cancer$perimeter_worst <- ifelse(is.na(cancer$perimeter_worst), mean(na.omit(cancer$perimeter_worst)), cancer$perimeter_worst)
+cancer$area_worst <- ifelse(is.na(cancer$area_worst), mean(na.omit(cancer$area_worst)), cancer$area_worst)
+cancer$smoothness_worst <- ifelse(is.na(cancer$smoothness_worst), mean(na.omit(cancer$smoothness_worst)), cancer$smoothness_worst)
+cancer$compactness_worst <- ifelse(is.na(cancer$compactness_worst), mean(na.omit(cancer$compactness_worst)), cancer$compactness_worst)
+cancer$concavity_worst <- ifelse(is.na(cancer$concavity_worst), mean(na.omit(cancer$concavity_worst)), cancer$concavity_worst)
+cancer$concave.points_worst <- ifelse(is.na(cancer$concave.points_worst), mean(na.omit(cancer$concave.points_worst)), cancer$concave.points_worst)
+cancer$symmetry_worst <- ifelse(is.na(cancer$symmetry_worst),mean(na.omit(cancer$symmetry_worst)), cancer$symmetry_worst)
+cancer$fractal_dimension_worst <- ifelse(is.na(cancer$fractal_dimension_worst), mean(na.omit(cancer$fractal_dimension_worst)), cancer$fractal_dimension_worst)
+```
+
+De esta manera ya está realizado el tratamiento de los valores extremos.
+
+# 4. Análisis de los datos
+
+## 4.1. Selección de los grupos de datos que se quieren analizar/comparar
+
+Para empezar el análisis, vamos a ver unos descriptivos básicos de los datos.
+
+```{r}
+summary(cancer)
+```
+
+En primer lugar, vamos a crear un gráfico para ver la distribución de la variable objetivo, diagnosis.
+
+```{r}
+plot(x=cancer$diagnosis, main ="Distribución de varoles según diagnóstico", xlab = "Diagnóstico", ylab = "Número de registros")
+```
+
+Se observa que existen más observaciones de muestras benignas que malignas. 
+
+Vamos a realizar un par de gráficas para ver la distribución de las varaibles en base a la variable objetivo.
+
+```{r}
+par(mfrow = c(1, 2))
+hist(filter(cancer, diagnosis == "B")$area_mean, main = "Media del área benigno")
+hist(filter(cancer, diagnosis == "M")$area_mean, main = "Media del área maligno")
+```
+
+Se obsserva que la distribución de la media del área del tumor toma valores mayores en el caso de los tumores malignos. Se realizan los mismos gráficos con un par de variables más.
+
+```{r}
+par(mfrow = c(2, 2))
+hist(filter(cancer, diagnosis == "B")$perimeter_mean, main = "Media del perímetro benigno")
+hist(filter(cancer, diagnosis == "M")$perimeter_mean, main = "Media del perímetro maligno")
+hist(filter(cancer, diagnosis == "B")$symmetry_mean, main = "Media de la simetría benigno")
+hist(filter(cancer, diagnosis == "M")$symmetry_mean, main = "Media de la simetría maligno")
+```
+
+También se nota la diferencia en la distribución de valores para el perímetro, mientras que en la simetría la diferencia es menos notable.
+
+## 4.2. Comprobación de la normalidad y homogeneidad de la varianza
+
+Para la comprobación de la normalidad utilizaremos el test de Shapiro-Wilk.
+
+De esa forma comparamos los p-valor obtenidos con $\alpha$ = 0, 05. Si el valor obtenido para cada variable es mayor, esta sigue una distribución normal y si no es el caso, lo mostramos en la salida.
+
+```{r}
+alpha = 0.05
+col.names = colnames(cancer)
+
+for (i in 1:ncol(cancer)) {
+  if (i == 1) cat("Variables que no siguen una distribución normal y su p-value:\n")
+  if (is.integer(cancer[,i]) | is.numeric(cancer[,i])) {
+    p_val = shapiro.test(cancer[,i])$p.value
+    if (p_val < alpha) {
+      cat(col.names[i])
+      cat("(")
+      cat(p_val)
+      cat(")")
+      # Format output
+      if (i < ncol(cancer) - 1) cat(", ")
+      if (i %% 3 == 0) cat("\n")
+    }
+  }
+}
+```
+
+Veamos un ejemplo gráfico para la variable cancer$symmetry_mean (p-valor más elevado)
+
+```{r}
+qqnorm(y = cancer$symmetry_mean, main = "Normal Q-Q Plot of cancer$symmetry_mean")
+qqline(y = cancer$symmetry_mean)
+```
+
+
+Veamos un ejemplo gráfico para la variable cancer$area_se (p-valor más bajo)
+
+```{r}
+qqnorm(y = cancer$area_se, main = "Normal Q-Q Plot of cancer$area_se")
+qqline(y = cancer$area_se)
+```
+
+
+
+
+Seguidamente, pasamos a estudiar la homogeneidad de varianzas mediante la aplicación de un test de Fligner-Killeen. 
+
+Para poder utilizar esta función, deberemos convertir la variable **diagnosis** de factor a numérica, por lo que crearemos una nueva columna en la cual el valor "1" representa "B" y el valor "2" representa "M".
+
+```{r}
+library(stats)
+cancer$diagnosis_num <- as.numeric(cancer$diagnosis)
+fligner.test(diagnosis_num ~ radius_mean, data = cancer)
+fligner.test(diagnosis_num ~ interaction(radius_mean+texture_mean+perimeter_mean+area_mean+smoothness_mean+compactness_mean+concavity_mean+concave.points_mean+symmetry_mean+fractal_dimension_mean), data = cancer)
+```
+
+Puesto que obtenemos un p-valor superior a 0.05 en el primer caso, aceptamos la hipótesis de que las varianzas de ambas muestras son homogéneas.
+
+
+## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos
+
+### 4.3.1. Análisis de correlación entre variables
+
+```{r}
+corr_matrix <- matrix(nc = 2, nr = 0)
+colnames(corr_matrix) <- c("estimate", "p-value")
+# Calcular el coeficiente de correlación para cada variable cuantitativa
+# con respecto al campo "diagnosis_num"
+for (i in 1:(ncol(cancer) - 1)) {
+  if (is.integer(cancer[,i]) | is.numeric(cancer[,i])) {
+    spearman_test = cor.test(cancer[,i],
+    cancer$diagnosis_num,
+    method = "spearman" , exact=FALSE)
+    corr_coef = spearman_test$estimate
+    p_val = spearman_test$p.value
+    # Add row to matrix
+    pair = matrix(ncol = 2, nrow = 1)
+    pair[1][1] = corr_coef
+    pair[2][1] = p_val
+    corr_matrix <- rbind(corr_matrix, pair)
+    rownames(corr_matrix)[nrow(corr_matrix)] <- colnames(cancer)[i]
+  }
+}
+
+corr_matrix[order(corr_matrix[,"estimate"]), ]
+
+```
+
+Como se puede observar, la variable que más influye es **perimeter_worst**. Al mismo tiempo se puede ver como los p-valores son muy bajos.
+
+
+## 4.3.2. Contraste de hipótesis
+
+En este segundo modelo se quiere determinar si el ser diagnosticado depende del perimeter_mean (tamaño medio del tumor central), si éste tiene un valor inferior de 92.
+
+```{r}
+cancer.low.perimeter_mean <- cancer[cancer$perimeter_mean <= 92,]$diagnosis_num
+cancer.high.perimeter_mean <- cancer[cancer$perimeter_mean > 92,]$diagnosis_num
+
+#Escalamos para normalizar
+cancer.low.perimeter_mean <- scale(cancer.low.perimeter_mean,center=T,scale=T)
+cancer.high.perimeter_mean <- scale(cancer.high.perimeter_mean,center=T,scale=T)
+
+t.test(cancer.low.perimeter_mean, cancer.high.perimeter_mean, alternative = "less")
+```
+
+Puesto que obtenemos un p-valor superior a 0.05, damos por buena la hipótesis.
+
+
+## 4.3.3. Modelo de regresión lineal
+
+Un tercer modelo es la regresión lineal. Entre los diferentes modelos, calcularemos su coeficiente de determinación (R2) para posteriormente realizar una predicción.
+
+```{r}
+# Regresores cuantitativos con mayor coeficiente
+# de correlación con respecto al precio
+corr1 = cancer$perimeter_worst
+corr2 = cancer$concave.points_worst
+corr3 = cancer$radius_worst
+corr4 = cancer$concave.points_mean
+corr5 = cancer$area_worst
+corr6 = cancer$perimeter_mean
+corr7 = cancer$concavity_mean
+corr8 = cancer$radius_mean
+# Variable a predecir
+diagnostico = cancer$diagnosis_num
+# Generación de varios modelos
+modelo1 <- lm(diagnostico ~ corr1 + corr2 + corr3 + corr4 + corr5 + corr6 + corr7 + corr8, data = cancer)
+modelo2 <- lm(diagnostico ~ corr1 + corr2 + corr4 + corr6, data = cancer)
+modelo3 <- lm(diagnostico ~ corr1 + corr2 + corr3 + corr5, data = cancer)
+modelo4 <- lm(diagnostico ~ corr4 + corr6 + corr7 + corr8, data = cancer)
+```
+
+
+Para los anteriores modelos de regresión lineal múltiple obtenidos, podemos utilizar el coeficiente de determinación para medir la bondad de los ajustes y quedarnos con aquel modelo que mejor coeficiente presente.
+
+```{r}
+# Tabla con los coeficientes de determinación de cada modelo
+tabla.coeficientes <- matrix(c(1, summary(modelo1)$r.squared,
+2, summary(modelo2)$r.squared,
+3, summary(modelo3)$r.squared,
+4, summary(modelo4)$r.squared),
+ncol = 2, byrow = TRUE)
+colnames(tabla.coeficientes) <- c("Modelo", "R^2")
+tabla.coeficientes
+```
+
+En este caso, el primer modelo tiene un mayor coeficiente de determinación. Ahora, empleando este modelo, realizaremos predicciones:
+
+```{r}
+newdata1 <- data.frame(
+  corr1 = 184.60,
+  corr2 = 0.26540,
+  corr3 = 25.38,
+  corr4 = 0.14710,
+  corr5 = 2019,
+  corr6 = 122.80,
+  corr7 = 0.30010,
+  corr8 = 17.990
+)
+
+newdata2 <- data.frame(
+  corr1 = 65.13,
+  corr2 = 0.06227,
+  corr3 = 10.23,
+  corr4 = 0.02076,
+  corr5 = 314.9,
+  corr6 = 60.34,
+  corr7 = 0.02956,
+  corr8 = 9.504
+)
+
+# Predecir el diagnostico
+predict(modelo1, newdata1)
+predict(modelo1, newdata2)
+```
+
+Como vemos, en estos ejemplos con valores del propio dataset, las prediciones son cercanas a "2" y a "1" respectivamente, tal y como esos mismos registros tienen informado en la variable **diagnosis_num**. Los registros son el 1 y el 22.
+
+# 5. Representación de los resultados a partir de tablas y gráficas. 
+Este apartado se ha respondido a lo largo de la práctica.
+
+# 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+
+A la luz de los resultados mostrados en cada uno de los apartados anteriores, mediante el uso del dataset indicado, podemos concluir que mediante un modelo de regresión lineal podemos realizar predicciones para la detección del cáncer de mama. 
+
+
+# Contribucción
+
+
+```{r}
+Contribuciones <- c("Investigación previa", "Redacción de las respuestas", "Desarrollo código")
+Firmas <- c("CRS, YFR", "CRS, YFR", "CRS, YFR")
+tabla <- data.frame(cbind(Contribuciones, Firmas))
+knitr::kable(tabla)
+```
+
