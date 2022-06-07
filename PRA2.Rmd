@@ -462,3 +462,9 @@ tabla <- data.frame(cbind(Contribuciones, Firmas))
 knitr::kable(tabla)
 ```
 
+# Export fichero final
+
+```{r}
+write.csv(cancer, file ="./data_clean.csv")
+```
+
